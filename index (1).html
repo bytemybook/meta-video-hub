@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Meta Video Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #050505;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow-x: hidden;
+    }
+
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 10px 0 6px;
+    }
+
+    .subtext {
+      font-size: 14px;
+      color: #bdbdbd;
+      margin-bottom: 16px;
+    }
+
+    .video-wrap {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #111;
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 12px auto 16px;
+      border: 1px solid #2b2b2b;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    .empty-player {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #8f8f8f;
+      font-size: 18px;
+      padding: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 15px;
+      border-radius: 14px;
+      border: none;
+      font-size: 16px;
+      margin: 8px 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      border-radius: 14px;
+      border: none;
+      font-size: 18px;
+      margin: 7px 0;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: white;
+      color: black;
+      font-weight: bold;
+    }
+
+    .secondary {
+      background: #252525;
+      color: white;
+    }
+
+    .saved-title {
+      margin-top: 20px;
+      color: #d0d0d0;
+      font-size: 15px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #9b9b9b;
+      margin-top: 10px;
+      min-height: 20px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <h1>Meta Video Hub</h1>
+    <div class="subtext">Play saved playlists/videos or paste a YouTube link.</div>
+
+    <div class="video-wrap" id="videoBox">
+      <div class="empty-player">Pick a video or playlist to start.</div>
+    </div>
+
+    <div class="saved-title">Saved Playlists</div>
+
+    <button class="primary" onclick="playSavedPlaylist('PLe78avmxtbEF4LWOxij7yjdvlyXCgzljI')">
+      Play Playlist 1
+    </button>
+
+    <button class="primary" onclick="playSavedPlaylist('PL4Gjl2ic9vnrPP43rNEPc4kb9AZgoHzN6')">
+      Play Playlist 2
+    </button>
+
+    <div class="saved-title">Saved Movies</div>
+
+    <button class="secondary" onclick="playSavedVideo('gLHvpSchABc')">
+      Play Movie 1
+    </button>
+
+    <button class="secondary" onclick="playSavedVideo('1F6q7xLgOVI')">
+      Play Movie 2
+    </button>
+
+    <button class="secondary" onclick="playSavedVideo('Gp2rltNKCzE')">
+      Play Movie 3
+    </button>
+
+    <div class="saved-title">Extras</div>
+
+    <button class="secondary" onclick="playSavedVideo('jfKfPfyJRdk')">
+      Play Lo-Fi Study Music
+    </button>
+
+    <button class="secondary" onclick="playSavedVideo('M7lc1UVf-VE')">
+      Play YouTube Test Video
+    </button>
+
+    <div class="saved-title">Paste a YouTube video or playlist link</div>
+
+    <input
+      id="youtubeUrl"
+      type="text"
+      placeholder="Paste YouTube video or playlist link here"
+    />
+
+    <button class="primary" onclick="loadFromInput()">
+      Load Link
+    </button>
+
+    <button class="secondary" onclick="clearVideo()">
+      Clear
+    </button>
+
+    <div class="small" id="status">Ready.</div>
+  </div>
+
+  <script>
+    function getYouTubeInfo(url) {
+      try {
+        const text = url.trim();
+
+        if (text.length === 11 && !text.includes("http")) {
+          return { type: "video", id: text };
+        }
+
+        const parsed = new URL(text);
+
+        const playlistID = parsed.searchParams.get("list");
+        if (playlistID) {
+          return { type: "playlist", id: playlistID };
+        }
+
+        if (parsed.hostname.includes("youtu.be")) {
+          const id = parsed.pathname.replace("/", "").split("?")[0];
+          return { type: "video", id: id };
+        }
+
+        if (parsed.hostname.includes("youtube.com")) {
+          if (parsed.pathname.includes("/watch")) {
+            const videoID = parsed.searchParams.get("v");
+            return { type: "video", id: videoID };
+          }
+
+          if (parsed.pathname.includes("/shorts/")) {
+            const videoID = parsed.pathname.split("/shorts/")[1].split("/")[0];
+            return { type: "video", id: videoID };
+          }
+
+          if (parsed.pathname.includes("/embed/")) {
+            const videoID = parsed.pathname.split("/embed/")[1].split("/")[0];
+            return { type: "video", id: videoID };
+          }
+        }
+
+        return null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function playSavedVideo(videoID) {
+      showVideo(videoID);
+    }
+
+    function playSavedPlaylist(playlistID) {
+      showPlaylist(playlistID);
+    }
+
+    function loadFromInput() {
+      const input = document.getElementById("youtubeUrl");
+      const status = document.getElementById("status");
+      const info = getYouTubeInfo(input.value);
+
+      if (!info || !info.id) {
+        status.textContent = "I could not read that YouTube link.";
+        return;
+      }
+
+      if (info.type === "playlist") {
+        showPlaylist(info.id);
+      } else {
+        showVideo(info.id);
+      }
+    }
+
+    function showVideo(videoID) {
+      const videoBox = document.getElementById("videoBox");
+      const status = document.getElementById("status");
+
+      const embedUrl =
+        "https://www.youtube.com/embed/" +
+        videoID +
+        "?autoplay=1&playsinline=1&rel=0";
+
+      videoBox.innerHTML =
+        '<iframe src="' +
+        embedUrl +
+        '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+
+      status.textContent = "Playing video.";
+    }
+
+    function showPlaylist(playlistID) {
+      const videoBox = document.getElementById("videoBox");
+      const status = document.getElementById("status");
+
+      const embedUrl =
+        "https://www.youtube.com/embed?listType=playlist&list=" +
+        playlistID +
+        "&autoplay=1&playsinline=1&rel=0";
+
+      videoBox.innerHTML =
+        '<iframe src="' +
+        embedUrl +
+        '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+
+      status.textContent = "Playing playlist.";
+    }
+
+    function clearVideo() {
+      const videoBox = document.getElementById("videoBox");
+      const input = document.getElementById("youtubeUrl");
+      const status = document.getElementById("status");
+
+      input.value = "";
+      videoBox.innerHTML = '<div class="empty-player">Pick a video or playlist to start.</div>';
+      status.textContent = "Cleared.";
+    }
+
+    document.addEventListener("keydown", function(event) {
+      if (event.key === "Enter" || event.key === " ") {
+        loadFromInput();
+      }
+
+      if (event.key === "Escape") {
+        clearVideo();
+      }
+    });
+  </script>
+</body>
+</html>
